@@ -53,7 +53,7 @@ def plot_overview(
         List of all report components.
     """
     display_expander(readme, "overview", "More info on this plot")
-    bool_param = False if cleaning["log_transform"] else True
+    bool_param = not cleaning["log_transform"]
     if make_future_forecast:
         model = models["future"]
         forecast = forecasts["future"]
@@ -245,7 +245,7 @@ def plot_future(
         List of all report components.
     """
     display_expander(readme, "future", "More info on this plot")
-    bool_param = False if cleaning["log_transform"] else True
+    bool_param = not cleaning["log_transform"]
     fig = plot_plotly(
         models["future"],
         forecasts["future"],
@@ -311,19 +311,18 @@ def plot_forecasts_vs_truth(
     fig.update_xaxes(
         rangeslider_visible=True,
         rangeselector=dict(
-            buttons=list(
-                [
-                    dict(count=7, label="1w", step="day", stepmode="backward"),
-                    dict(count=1, label="1m", step="month", stepmode="backward"),
-                    dict(count=3, label="3m", step="month", stepmode="backward"),
-                    dict(count=6, label="6m", step="month", stepmode="backward"),
-                    dict(count=1, label="YTD", step="year", stepmode="todate"),
-                    dict(count=1, label="1y", step="year", stepmode="backward"),
-                    dict(step="all"),
-                ]
-            )
+            buttons=[
+                dict(count=7, label="1w", step="day", stepmode="backward"),
+                dict(count=1, label="1m", step="month", stepmode="backward"),
+                dict(count=3, label="3m", step="month", stepmode="backward"),
+                dict(count=6, label="6m", step="month", stepmode="backward"),
+                dict(count=1, label="YTD", step="year", stepmode="todate"),
+                dict(count=1, label="1y", step="year", stepmode="backward"),
+                dict(step="all"),
+            ]
         ),
     )
+
     fig.update_layout(
         yaxis_title=target_col,
         legend_title_text="",
@@ -431,7 +430,7 @@ def plot_residuals_distrib(eval_df: pd.DataFrame, use_cv: bool, style: Dict[Any,
         title_x=0.5,
         title_y=0.85,
         xaxis_title="Error (Forecast - Truth)",
-        showlegend=True if use_cv else False,
+        showlegend=use_cv,
         xaxis_zeroline=True,
         xaxis_zerolinecolor=style["color_axis"],
         xaxis_zerolinewidth=1,
@@ -442,6 +441,7 @@ def plot_residuals_distrib(eval_df: pd.DataFrame, use_cv: bool, style: Dict[Any,
         height=500,
         width=800,
     )
+
     return fig
 
 
@@ -470,8 +470,11 @@ def plot_detailed_metrics(
     report: List[Dict[str, Any]]
         List of all report components.
     """
-    metrics = [metric for metric in perf.keys() if perf[metric][eval["granularity"]].nunique() > 1]
-    if len(metrics) > 0:
+    if metrics := [
+        metric
+        for metric in perf
+        if perf[metric][eval["granularity"]].nunique() > 1
+    ]:
         fig = make_subplots(
             rows=len(metrics) // 2 + len(metrics) % 2, cols=2, subplot_titles=metrics
         )
@@ -636,19 +639,29 @@ def make_waterfall_components_plot(
         go.Waterfall(
             orientation="v",
             measure=["relative"] * (len(waterfall) - 1) + ["total"],
-            x=[x.capitalize() for x in list(waterfall.index)[:-1] + ["Forecast (Truth)"]],
+            x=[
+                x.capitalize()
+                for x in list(waterfall.index)[:-1] + ["Forecast (Truth)"]
+            ],
             y=list(waterfall.values),
             textposition="auto",
-            text=[
-                "+" + str(round(x, N_digits)) if x > 0 else "" + str(round(x, N_digits))
-                for x in list(waterfall.values)[:-1]
-            ]
-            + [f"{round(waterfall.values[-1], N_digits)} ({round(truth, N_digits)})"],
+            text=(
+                [
+                    f"+{str(round(x, N_digits))}"
+                    if x > 0
+                    else "" + str(round(x, N_digits))
+                    for x in list(waterfall.values)[:-1]
+                ]
+                + [
+                    f"{round(waterfall.values[-1], N_digits)} ({round(truth, N_digits)})"
+                ]
+            ),
             decreasing={"marker": {"color": style["colors"][1]}},
             increasing={"marker": {"color": style["colors"][0]}},
             totals={"marker": {"color": style["colors"][2]}},
         )
     )
+
     y_label = f"log {target_col}" if cleaning["log_transform"] else target_col
     fig.update_yaxes(title_text=f"{y_label} / {resampling['freq']}")
     fig.update_layout(

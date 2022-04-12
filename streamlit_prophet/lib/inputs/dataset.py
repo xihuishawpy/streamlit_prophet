@@ -70,10 +70,11 @@ def input_dataset(
                     "instructions.toml",
                     "Instructions",
                 )
-                config_file = st.file_uploader(
-                    "Upload custom config", type="toml", help=readme["tooltips"]["custom_config"]
-                )
-                if config_file:
+                if config_file := st.file_uploader(
+                    "Upload custom config",
+                    type="toml",
+                    help=readme["tooltips"]["custom_config"],
+                ):
                     config = load_custom_config(config_file)
                 else:
                     st.stop()
@@ -179,8 +180,7 @@ def input_future_regressors(
             f"to **{end.strftime('%Y-%m-%d')}** at the same frequency as input dataset "
             f"and at format **{load_options['date_format']}**. \n"
         )
-        dimensions_col = [col for col in dimensions.keys() if col != "agg"]
-        if len(dimensions_col) > 0:
+        if dimensions_col := [col for col in dimensions if col != "agg"]:
             if len(dimensions_col) > 1:
                 tooltip += (
                     f"- Columns with the following names for dimensions: `{', '.join(dimensions_col[:-1])}, "
@@ -195,10 +195,9 @@ def input_future_regressors(
             )
         else:
             tooltip += f"- Regressor column named `{regressors_col[0]}`."
-        regressors_file = st.file_uploader(
+        if regressors_file := st.file_uploader(
             "Upload a csv file for regressors", type="csv", help=tooltip
-        )
-        if regressors_file:
+        ):
             datasets["future_regressors"] = load_dataset(regressors_file, load_options)
     else:
         st.write("There are no regressors selected.")
